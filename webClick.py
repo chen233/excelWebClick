@@ -18,9 +18,9 @@ from email.header import Header
 EMAIL_CONFIG = {
     "smtp_server": "smtp.qq.com",  # 例如：smtp.qq.com、smtp.gmail.com
     "smtp_port": 587,  # 通常为587或465
-    "smtp_username": "583134449@qq.com",
-    "smtp_password": "hbognhcftpudbcad",  # 邮箱密码或授权码
-    "sender": "583134449@qq.com",
+    "smtp_username": "",
+    "smtp_password": "",  # 邮箱密码或授权码
+    "sender": "",
     "receiver": "recipient@example.com"  # 接收通知的邮箱
 }
 
