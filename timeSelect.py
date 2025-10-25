@@ -55,7 +55,7 @@ def select_earliest_in_range(driver, start_date, end_date, daily_start_time, dai
 
         if not valid_slots:
             logger.info("指定范围内无符合条件的时段")
-            return False
+            return False, None
 
         # 按时间排序，选择最早的时段
         valid_slots.sort(key=lambda x: x[0])  # 按时间排序
@@ -88,7 +88,7 @@ def select_earliest_in_range(driver, start_date, end_date, daily_start_time, dai
 
         logger.info(f"已选择最早时段：{earliest_text}")
         print(f"已选择最早时段：{earliest_text}")
-        return True
+        return True, earliest_text  # 返回是否成功和选中的时间
 
     except Exception as e:
         logger.error(f"时间选择错误：{str(e)}")

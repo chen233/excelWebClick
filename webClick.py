@@ -8,6 +8,64 @@ from datetime import datetime
 import timeSelect
 import logging
 from selenium.webdriver.chrome.service import Service  # 新增：导入Service类
+# 首先在文件顶部添加邮件相关依赖
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.header import Header
+
+# 在webClick.py中添加邮件配置（请根据实际情况修改）
+EMAIL_CONFIG = {
+    "smtp_server": "smtp.qq.com",  # 例如：smtp.qq.com、smtp.gmail.com
+    "smtp_port": 587,  # 通常为587或465
+    "smtp_username": "583134449@qq.com",
+    "smtp_password": "hbognhcftpudbcad",  # 邮箱密码或授权码
+    "sender": "583134449@qq.com",
+    "receiver": "recipient@example.com"  # 接收通知的邮箱
+}
+
+
+# 添加发送邮件函数
+def send_booking_success_email(config_data, booking_time):
+    """发送预约成功邮件"""
+    try:
+        # 创建邮件对象
+        msg = MIMEMultipart()
+        msg['From'] = Header(f"预约系统 <{EMAIL_CONFIG['sender']}>")
+        msg['To'] = EMAIL_CONFIG['receiver']
+        msg['Subject'] = Header("【预约成功通知】驾驶考试预约已完成", 'utf-8')
+
+        # 邮件内容
+        content = f"""
+        <p>驾驶考试预约已成功！</p>
+        <p>预约信息如下：</p>
+        <p>驾照编号：{config_data['dlNumber']}</p>
+        <p>联系人：{config_data['contactName']}</p>
+        <p>联系电话：{config_data['contactPhone']}</p>
+        <p>考试类型：{config_data['Test type']}</p>
+        <p>考试地点：{config_data['Region']} - {config_data['Centre']}</p>
+        <p>预约时间：{booking_time}</p>
+        <p>请按时前往参加考试。</p>
+        """
+        msg.attach(MIMEText(content, 'html', 'utf-8'))
+
+        # 发送邮件
+        server = smtplib.SMTP(EMAIL_CONFIG['smtp_server'], EMAIL_CONFIG['smtp_port'])
+        server.starttls()  # 启用TLS加密
+        server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
+        server.sendmail(
+            EMAIL_CONFIG['sender'],
+            EMAIL_CONFIG['receiver'],
+            msg.as_string()
+        )
+        server.quit()
+
+        logger.info("预约成功邮件已发送")
+        return True
+    except Exception as e:
+        logger.error(f"发送邮件失败：{str(e)}")
+        return False
+
 
 TARGET_URL = "https://www.service.transport.qld.gov.au/SBSExternal/public/WelcomeDrivingTest.xhtml"
 WAIT_TIME = 15
@@ -181,7 +239,7 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
         time.sleep(2)
 
         # 调用时间选择函数，选择范围内最早的时间
-        success = timeSelect.select_earliest_in_range(
+        success, selected_time = timeSelect.select_earliest_in_range(
             driver=driver,
             start_date=start_date,
             end_date=end_date,
@@ -250,6 +308,7 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
             # 若能走到这一步，说明成功找到成功元素
             logger.info("付款成功！已完成预约流程")
             payment_success = True
+            send_booking_success_email(config_data, earliest_text)  # 发送成功邮件
 
         except Exception as e:
             # 捕获超时/元素不存在异常，视为付款未成功
