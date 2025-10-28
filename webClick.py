@@ -1,4 +1,5 @@
 import undetected_chromedriver as uc
+from selenium.common import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -18,10 +19,10 @@ from email.header import Header
 EMAIL_CONFIG = {
     "smtp_server": "smtp.qq.com",  # 例如：smtp.qq.com、smtp.gmail.com
     "smtp_port": 587,  # 通常为587或465
-    "smtp_username": "",
-    "smtp_password": "",  # 邮箱密码或授权码
-    "sender": "",
-    "receiver": "recipient@example.com"  # 接收通知的邮箱
+    "smtp_username": "583134449@qq.com",
+    "smtp_password": "hbognhcftpudbcad",  # 邮箱密码或授权码
+    "sender": "583134449@qq.com",
+    "receiver": "Hungryworld0001@gmail.com"  # 接收通知的邮箱
 }
 
 
@@ -67,8 +68,8 @@ def send_booking_success_email(config_data, booking_time):
         return False
 
 
-TARGET_URL = "https://www.service.transport.qld.gov.au/SBSExternal/public/WelcomeDrivingTest.xhtml"
-WAIT_TIME = 15
+TARGET_URL = "https://www.service.transport.qld.gov.au/SBSExternal/application/CleanBookingDE.xhtml"
+WAIT_TIME = 10
 logger = logging.getLogger("BookingChecker")  # 这行是核心，必须加！
 
 # 从Excel读取的配置信息（需要在调用时传入）
@@ -104,7 +105,13 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
     # 配置无头模式
     chrome_options = uc.ChromeOptions()
     # chrome_options.add_argument("--headless=new")  # 关键：启用无头模式,取消注释就不显示浏览器画面
-    chrome_options.add_argument('--start-maximized')  # 取消注释！启用浏览器最大化（普通模式生效）
+    # chrome_options.add_argument('--start-maximized')  # 取消注释！启用浏览器最大化（普通模式生效）
+    chrome_options.add_argument('--blink-settings=imagesEnabled=false')  # 禁用图片加载
+    chrome_options.add_argument('--disable-extensions')  # 禁用扩展
+    chrome_options.add_argument('--disable-gpu')  # 禁用GPU加速（非必要）
+    chrome_options.add_argument('--no-sandbox')  # 禁用沙箱（提升速度）
+    chrome_options.add_argument('--disable-dev-shm-usage')  # 避免共享内存不足
+    chrome_options.add_argument('--ignore-certificate-errors')  # 忽略证书错误（加速加载）
 
     driver_service = Service(executable_path=r"chrome\chromedriver.exe")  # 注意：路径用r开头避免转义
 
@@ -114,20 +121,13 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
     driver.get(TARGET_URL)  # 后续操作正常执行，无界面显示
     logger.info("已启动隐藏自动化特征的浏览器，正在访问网站...")
     try:
-        driver.get(TARGET_URL)
-        # 等待继续按钮加载
-        WebDriverWait(driver, WAIT_TIME).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "ui-button"))
-        )
-
         # 点击继续按钮
-        continue_btn = driver.find_element(By.CLASS_NAME, "ui-button")
-        continue_btn.click()
-        time.sleep(1)
 
-        continue_btn = driver.find_element(By.CLASS_NAME, "ui-button")
+
+        continue_btn = WebDriverWait(driver, WAIT_TIME).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "ui-button"))
+        )
         continue_btn.click()
-        time.sleep(1)
 
         # 输入驾照编号
         dl_input = WebDriverWait(driver, WAIT_TIME).until(
@@ -151,13 +151,12 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
 
         # 选择考试类型
         try:
-            dropdown_button = WebDriverWait(driver, 10).until(
+            dropdown_button = WebDriverWait(driver, WAIT_TIME).until(
                 EC.element_to_be_clickable((By.ID, "CleanBookingDEForm:productType"))
             )
             dropdown_button.click()
-            time.sleep(1)
 
-            target_option = WebDriverWait(driver, 10).until(
+            target_option = WebDriverWait(driver, WAIT_TIME).until(
                 EC.visibility_of_element_located((
                     By.XPATH,
                     f'//ul[@id="CleanBookingDEForm:productType_items"]/li[text()="{INPUT_DATA["Test type"]}"]'
@@ -167,28 +166,27 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
             actions = ActionChains(driver)
             actions.move_to_element(target_option).click().perform()
             logger.info("考试类型选择成功！")
-            time.sleep(2)
         except Exception as e:
             logger.info(f"考试类型选择失败：{e}")
             raise
 
         # 继续到下一步
-        continue_btn = driver.find_element(By.CLASS_NAME, "ui-button")
-        continue_btn.click()
-        time.sleep(2)
-        continue_btn = driver.find_element(By.CLASS_NAME, "ui-button")
-        continue_btn.click()
-        time.sleep(2)
-
+        dropdown_button1 = WebDriverWait(driver, WAIT_TIME).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "btn-success"))
+        )
+        dropdown_button1.click()
+        dropdown_button2 = WebDriverWait(driver, WAIT_TIME).until(
+            EC.element_to_be_clickable((By.ID, "BookingConfirmationForm:actionFieldList:confirmButtonField"
+                                               ":confirmButton"))
+        )
+        dropdown_button2.click()
         # 选择地区
         try:
-            dropdown_button = WebDriverWait(driver, 10).until(
+            dropdown_button = WebDriverWait(driver, WAIT_TIME).until(
                 EC.element_to_be_clickable((By.ID, "BookingSearchForm:region_label"))
             )
             dropdown_button.click()
-            time.sleep(1)
-
-            target_option = WebDriverWait(driver, 10).until(
+            target_option = WebDriverWait(driver, WAIT_TIME).until(
                 EC.visibility_of_element_located((
                     By.XPATH,
                     f'//ul[@id="BookingSearchForm:region_items"]/li[text()="{INPUT_DATA["Region"]}"]'
@@ -198,20 +196,18 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
             actions = ActionChains(driver)
             actions.move_to_element(target_option).click().perform()
             logger.info("地区选择成功！")
-            time.sleep(1)
         except Exception as e:
             logger.info(f"地区选择失败：{e}")
             raise
 
         # 选择考试中心
         try:
-            dropdown_button = WebDriverWait(driver, 10).until(
+            time.sleep(1)
+            dropdown_button = WebDriverWait(driver, WAIT_TIME).until(
                 EC.element_to_be_clickable((By.ID, "BookingSearchForm:centre"))
             )
             dropdown_button.click()
-            time.sleep(1)
-
-            target_option = WebDriverWait(driver, 10).until(
+            target_option = WebDriverWait(driver, WAIT_TIME).until(
                 EC.visibility_of_element_located((
                     By.XPATH,
                     f'//ul[@id="BookingSearchForm:centre_items"]/li[text()="{INPUT_DATA["Centre"]}"]'
@@ -221,23 +217,21 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
             actions = ActionChains(driver)
             actions.move_to_element(target_option).click().perform()
             logger.info("考试中心选择成功！")
-            time.sleep(1)
         except Exception as e:
             logger.info(f"考试中心选择失败：{e}")
             raise
 
         # 继续到时间选择页面
-        continue_btn = driver.find_element(By.CLASS_NAME, "ui-button")
+        continue_btn = WebDriverWait(driver, WAIT_TIME).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "btn-success"))
+        )
         continue_btn.click()
-        time.sleep(2)
 
         # 等待预约表格加载
         logger.info("\n等待预约时间表格加载...")
         WebDriverWait(driver, WAIT_TIME).until(
             EC.visibility_of_element_located((By.ID, "slotSelectionForm:slotTable"))
         )
-        time.sleep(2)
-
         # 调用时间选择函数，选择范围内最早的时间
         success, selected_time = timeSelect.select_earliest_in_range(
             driver=driver,
@@ -246,31 +240,30 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
             daily_start_time=daily_start_time,
             daily_end_time=daily_end_time
         )
-
         if not success:
             logger.info(f"{datetime.now()} 未在指定范围内找到可用时段")
             print(f"{datetime.now()} 未在指定范围内找到可用时段")
             return False
-
         # 成功选中后进入下一页
-        continue_btn = driver.find_element(By.CLASS_NAME, "ui-button")
-        continue_btn.click()
-        time.sleep(1)
-        continue_btn = driver.find_element(By.CLASS_NAME, "ui-button")
-        continue_btn.click()
-        time.sleep(1)
+        continue_btn5 = WebDriverWait(driver, WAIT_TIME).until(
+            EC.element_to_be_clickable((By.ID, "slotSelectionForm:actionFieldList:confirmButtonField:confirmButton"))
+        )
+        continue_btn5.click()
 
+        wait = WebDriverWait(driver, 10)
+        element = wait.until(EC.element_to_be_clickable((By.ID, "BookingConfirmationForm:actionFieldList:confirmButtonField:confirmButton")))
+        element.click()  # 此时元素一定存在于当前DOM中
+        time.sleep(1)
         # 填写邮箱
-        contactEmail = driver.find_element(By.ID,
-                                           "paymentOptionSelectionForm:paymentOptions:emailAddressField:emailAddress")
+        contactEmail = driver.find_element(By.ID,"paymentOptionSelectionForm:paymentOptions:emailAddressField:emailAddress")
         contactEmail.clear()
         contactEmail.send_keys(INPUT_DATA["contactEmail"])
         logger.info("已输入邮箱")
-        continue_btn1 = WebDriverWait(driver, 30).until(  # 等待15秒，直到按钮可点击
-            EC.element_to_be_clickable((By.CLASS_NAME, "ui-button"))
+        continue_btn1 = WebDriverWait(driver, WAIT_TIME).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "btn-success"))
         )
         continue_btn1.click()
-        time.sleep(20)
+        time.sleep(1)
 
         # 填写付款信息
         contactCard = driver.find_element(By.ID, "CardNumber")
@@ -299,7 +292,6 @@ def openweb(start_date, end_date, daily_start_time, daily_end_time, config_data)
             continue_btn.click()
 
             logger.info("已点击付款审核按钮，等待付款结果...")
-            time.sleep(2)  # 短暂等待页面跳转
             continue_btn1 = WebDriverWait(driver, WAIT_TIME).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[text()='PAY']"))  # 精准匹配“PAY”文本的按钮
             )
